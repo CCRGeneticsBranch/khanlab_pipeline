@@ -1,4 +1,4 @@
-gene_id	gene_type	gene_name	level
+gene_id	gene_name	gene_type	level
 ENSG00000223972.5	DDX11L1	transcribed_unprocessed_pseudogene	level 2
 ENSG00000227232.5	WASH7P	unprocessed_pseudogene	level 2
 ENSG00000278267.1	MIR6859-1	miRNA	level 3

@@ -18,6 +18,7 @@ try:
             raise Exception(sample_file + ' not found')
         TARGETS.append(sample_id + "/" + sample_id + ".sam")
         TARGETS.append(sample_id + "/" + sample_id + ".sorted.sam")
+        TARGETS.append(sample_id + "/" + sample_id + ".flnc.mapped.sorted.bam")
         TARGETS.append(sample_id + "/pb.collapsed.group.txt")
         TARGETS.append(sample_id + "/pb.collapsed.rep.fa")
         TARGETS.append(sample_id + "/pb.collapsed.abundance.txt")
@@ -30,6 +31,9 @@ try:
         sample["Sam"] = sample_id + "/" + sample_id + ".sorted.sam"
         sample["TargetSam"] = sample_id + "/" + sample_id + ".sorted.sam"
         sample["Type"] = "transcriptome"
+        if 'Ref' in sample:
+            config[genome]['ref'] = sample['Ref']
+            config[genome]['gtf_gencode'] = sample['GTF']
         #default primers
         if 'Primers' not in sample:
             sample["Primers"] = config["pipeline_home"] + '/config/pacbio/primers.fasta'
@@ -94,6 +98,47 @@ rule refine:
             isoseq3 refine {input} {params.primers} {output} -j ${{THREADS}}  --require-polya 2>{wildcards.sample}/refine.err
             """
 
+rule bam2fastq:
+    input: "{sample}/{sample}.flnc.bam"
+    output: "{sample}/{sample}.flnc.fastq"
+    version:
+            config["version"]["samtools"]
+    params: 
+            batch = lambda wildcards: config['cluster'][samples[wildcards.sample]["Type"]]['job_refine'],            
+            log_dir = lambda wildcards: wildcards.sample + '/log',
+            rulename = "bam2fastq"
+    shell: 
+            """
+            module load samtools/{version}
+            samtools fastq {input} > {output}
+            """
+
+rule map_flnc:
+    input: 
+            "{sample}/{sample}.flnc.fastq"
+    output: 
+            sam="{sample}/{sample}.flnc.mapped.sam",
+            bam="{sample}/{sample}.flnc.mapped.bam",
+            sorted_bam="{sample}/{sample}.flnc.mapped.sorted.bam"
+    version:
+            config["version"]["minimap2"]
+    params: 
+            batch = lambda wildcards: config['cluster'][samples[wildcards.sample]["Type"]]['job_minimap2'],
+            bed = lambda wildcards: config[genome]["bed_gencode"],
+            ref = lambda wildcards: config[genome]["ref"],
+            log_dir = lambda wildcards: wildcards.sample + '/log',
+            rulename = "map_flnc"
+    shell: 
+            """
+            module load minimap2/{version}
+            minimap2 -ax splice -t ${{THREADS}} -uf --secondary=no -C5 --junc-bed {params.bed} {params.ref} {input} > {output.sam}
+            module load samtools
+            samtools view -bS {output.sam} > {output.bam}
+            samtools sort -o {output.sorted_bam} -@ ${{THREADS}} {output.bam}
+            grep -v '^@' {output.sam} | cut -f3 | sort | uniq -c > {wildcards.sample}/{wildcards.sample}.flnc.summary_by_chr.tsv
+            samtools index {output.sorted_bam}
+            """
+            
 rule cluster:
     input: lambda wildcards: samples[wildcards.sample]["FLBam"]
     output: 
@@ -205,8 +250,8 @@ rule find_fusion:
             #module load python/3.7
 
             #conda init bash
-            export PYTHONPATH=$PYTHONPATH:/data/khanlab/projects/hsienchao/apps/cDNA_Cupcake/sequence/
-            export PATH=$PATH:/data/khanlab/projects/hsienchao/apps/utils
+            #export PYTHONPATH=$PYTHONPATH:/data/khanlab/projects/hsienchao/apps/cDNA_Cupcake/sequence/
+            #export PATH=$PATH:/data/khanlab/projects/hsienchao/apps/utils
             fusion_finder.py --input {params.work_dir}/{input.fasta} -s {params.work_dir}/{input.sam} --cluster_report {params.work_dir}/{input.csv} --dun-merge-5-shorter -o {params.work_dir}/{wildcards.sample}/fusion --min_locus_coverage_bp 500 -d 1000000
             mkdir -p {wildcards.sample}/fusion
             mv {wildcards.sample}/fusion.* {wildcards.sample}/fusion/
@@ -217,6 +262,7 @@ rule find_fusion:
 rule fusion_sqanti:
     input:
             abundance = "{sample}/fusion/fusion.abundance.txt",
+            pb_abundance = "{sample}/pb.collapsed.abundance.txt",
             gff = "{sample}/fusion/fusion.gff"
     output:
             annotation="{sample}/fusion/fusion.annotated.filtered.txt",
@@ -239,8 +285,8 @@ rule fusion_sqanti:
             rm -f {wildcards.sample}/fusion/sqanti*
             module load singularity
             export SINGULARITY_CACHEDIR={params.sqanti3_path}/.singularity
-            export SINGULARITY_BINDPATH="{params.work_dir},{params.sqanti3_path},/scratch,/lscratch,{params.ref_path}"
-            total_fl=`grep '# Total Number of FL reads: ' {wildcards.sample}/pb.collapsed.abundance.txt | sed 's/# Total Number of FL reads: //'`
+            export SINGULARITY_BINDPATH="{params.pipeline_home},{params.work_dir},{params.sqanti3_path},/scratch,/lscratch,{params.ref_path}"
+            total_fl=`grep '# Total Number of FL reads: ' {input.pb_abundance} | sed 's/# Total Number of FL reads: //'`
             {params.pipeline_home}/scripts/make_paired_abundance.sh {input.abundance} > {wildcards.sample}/fusion/fusion.pairs.abundance.txt
             singularity exec {params.sqanti3_path}/sqanti3_latest.sif bash -c "export R_LIBS={params.sqanti3_path} && sqanti3_qc.py --gtf {params.work_dir}/{input.gff} {params.gtf} {params.ref} --is_fusion -fl {params.work_dir}/{wildcards.sample}/fusion/fusion.pairs.abundance.txt -d {params.work_dir}/{wildcards.sample}/fusion -o sqanti"
             source {params.conda_home}/etc/profile.d/conda.sh
@@ -311,7 +357,7 @@ rule sqanti:
             rm -f {wildcards.sample}/{wildcards.sample}.sqanti*
             module load singularity
             export SINGULARITY_CACHEDIR={params.sqanti3_path}/.singularity
-            export SINGULARITY_BINDPATH="{params.work_dir},{params.sqanti3_path},/scratch,/lscratch,{params.ref_path}"
+            export SINGULARITY_BINDPATH="{params.work_dir},{params.sqanti3_path},/scratch,/lscratch,{params.ref_path},{params.pipeline_home}"
             singularity exec {params.sqanti3_path}/sqanti3_latest.sif bash -c "export R_LIBS={params.sqanti3_path} && sqanti3_qc.py {params.work_dir}/{input.collapse} {params.gtf} {params.ref} --aligner_choice=minimap2 -t ${{THREADS}} -d {params.work_dir}/{wildcards.sample} -o {wildcards.sample}.sqanti -fl {params.work_dir}/{input.count} --cage_peak {params.cage_peak} --polyA_motif_list {params.polya} --isoAnnotLite"
             singularity exec {params.sqanti3_path}/sqanti3_latest.sif bash -c "export R_LIBS={params.sqanti3_path} && sqanti3_RulesFilter.py {params.work_dir}/{output.classification} {params.work_dir}/{output.faa} {params.work_dir}/{output.sgtf}"
             module load samtools
