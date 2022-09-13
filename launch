@@ -18,7 +18,7 @@ my $dryrun;
 my $local;
 my $dag;
 my $help;
-my $walltime = "4-00:00:00";
+my $walltime = "2-00:00:00";
 my $partition = "ccr,norm";
 
 #$pipeline_home = readpipe()
@@ -36,7 +36,7 @@ $0 [options]
 
 required options:
 
-  -type|t     <string>  Pipeline type (available options: hic,chipseq,ranseq,pacbio,dnaseq)
+  -type|t     <string>  Pipeline type (available options: hic,chipseq,rnaseq,pacbio,dnaseq)
   -workdir|w  <string>  Working directory where all the results will be stored.
   -sheet|s    <string>  Sample sheet in YAML format
   -genome|g   <string>  Genome version (default: $genome)
@@ -59,8 +59,8 @@ __EOUSAGE__
 
 GetOptions(
 		'dryrun'        =>\$dryrun,
-		'walltime|l=s'        =>\$walltime,
-		'partition|p=s'        =>\$partition,
+		'walltime|l=s'  =>\$walltime,
+		'partition|p=s' =>\$partition,
 		'local'         =>\$local,
 		'dag'           =>\$dag,
 		'type|t=s'      =>\$type,
@@ -124,10 +124,11 @@ else{
 	system("chmod g+rw $work_dir/log");
 	my $batch_option = "--cpus-per-task=1 --mem=8G --partition=$partition --time=$walltime";
 	$snake_command = $snake_command." --jobname {params.rulename}.{jobid} --nolock  --ri -k -p -r -j 1000 --cores 150 --jobscript $pipeline_home/scripts/jobscript.sh --cluster \"sbatch -o {params.log_dir}/{params.rulename}.%j.o -e {params.log_dir}/{params.rulename}.%j.e {params.batch}\"";
+	my $export_option = "--export work_dir=$work_dir,snakefile=$snakefile,sheet=$sheet,type=$type,pipeline_home=$pipeline_home,data_dir=$data_dir,genome=$genome,now=$now";
 	if ($local) {
 		system($snake_command);
 	} else {
-		$jobid = readpipe("module load snakemake/5.13.0;sbatch -J ${type}_pipeline -e $work_dir/log/pipeline.$type.${sheet_name}_${now}.%j.e -o $work_dir/log/pipeline.$type.${sheet_name}_${now}.%j.o $batch_option $snake_command");
+		$jobid = readpipe("sbatch -J ${type}_pipeline -e $work_dir/log/pipeline.$type.${sheet_name}_${now}.%j.e -o $work_dir/log/pipeline.$type.${sheet_name}_${now}.%j.o $batch_option $export_option $pipeline_home/submit.sh");
 	}
 }
 

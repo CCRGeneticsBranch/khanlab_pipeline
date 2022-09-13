@@ -218,7 +218,7 @@ rule collapse:
     shell: 
             """
             module load singularity
-            export SINGULARITY_BINDPATH="{params.work_dir},/scratch,/lscratch"
+            export SINGULARITY_BINDPATH="{params.work_dir},/lscratch"
             singularity exec {params.cdna_cupcake_sif} collapse_isoforms_by_sam --input {params.work_dir}/{input.fasta} -s {params.work_dir}/{input.sam} --dun-merge-5-shorter -o {params.work_dir}/{wildcards.sample}/pb
             """
 
@@ -243,7 +243,7 @@ rule find_fusion:
     shell: 
             """
             #module load singularity
-            #export SINGULARITY_BINDPATH="{params.work_dir},/scratch,/lscratch"
+            #export SINGULARITY_BINDPATH="{params.work_dir},/lscratch"
             #singularity exec {params.cdna_cupcake_sif} fusion_finder --input {params.work_dir}/{input.fasta} -s {params.work_dir}/{input.sam} --cluster_report {params.work_dir}/{input.csv} --dun-merge-5-shorter -o {params.work_dir}/{wildcards.sample}/fusion --min_locus_coverage_bp 500 -d 1000000
             source {params.conda_home}/etc/profile.d/conda.sh
             conda activate {params.conda_env}
@@ -285,7 +285,7 @@ rule fusion_sqanti:
             rm -f {wildcards.sample}/fusion/sqanti*
             module load singularity
             export SINGULARITY_CACHEDIR={params.sqanti3_path}/.singularity
-            export SINGULARITY_BINDPATH="{params.pipeline_home},{params.work_dir},{params.sqanti3_path},/scratch,/lscratch,{params.ref_path}"
+            export SINGULARITY_BINDPATH="{params.pipeline_home},{params.work_dir},{params.sqanti3_path},/lscratch,{params.ref_path}"
             total_fl=`grep '# Total Number of FL reads: ' {input.pb_abundance} | sed 's/# Total Number of FL reads: //'`
             {params.pipeline_home}/scripts/make_paired_abundance.sh {input.abundance} > {wildcards.sample}/fusion/fusion.pairs.abundance.txt
             singularity exec {params.sqanti3_path}/sqanti3_latest.sif bash -c "export R_LIBS={params.sqanti3_path} && sqanti3_qc.py --gtf {params.work_dir}/{input.gff} {params.gtf} {params.ref} --is_fusion -fl {params.work_dir}/{wildcards.sample}/fusion/fusion.pairs.abundance.txt -d {params.work_dir}/{wildcards.sample}/fusion -o sqanti"
@@ -316,7 +316,7 @@ rule get_abundance:
     shell:
             """
             module load singularity
-            export SINGULARITY_BINDPATH="{params.work_dir},/scratch,/lscratch"
+            export SINGULARITY_BINDPATH="{params.work_dir},/lscratch"
             singularity exec {params.cdna_cupcake_sif} get_abundance_post_collapse {params.work_dir}/{wildcards.sample}/pb.collapsed {params.work_dir}/{input.csv}
             """
 
@@ -357,7 +357,7 @@ rule sqanti:
             rm -f {wildcards.sample}/{wildcards.sample}.sqanti*
             module load singularity
             export SINGULARITY_CACHEDIR={params.sqanti3_path}/.singularity
-            export SINGULARITY_BINDPATH="{params.work_dir},{params.sqanti3_path},/scratch,/lscratch,{params.ref_path},{params.pipeline_home}"
+            export SINGULARITY_BINDPATH="{params.work_dir},{params.sqanti3_path},/lscratch,{params.ref_path},{params.pipeline_home}"
             singularity exec {params.sqanti3_path}/sqanti3_latest.sif bash -c "export R_LIBS={params.sqanti3_path} && sqanti3_qc.py {params.work_dir}/{input.collapse} {params.gtf} {params.ref} --aligner_choice=minimap2 -t ${{THREADS}} -d {params.work_dir}/{wildcards.sample} -o {wildcards.sample}.sqanti -fl {params.work_dir}/{input.count} --cage_peak {params.cage_peak} --polyA_motif_list {params.polya} --isoAnnotLite"
             singularity exec {params.sqanti3_path}/sqanti3_latest.sif bash -c "export R_LIBS={params.sqanti3_path} && sqanti3_RulesFilter.py {params.work_dir}/{output.classification} {params.work_dir}/{output.faa} {params.work_dir}/{output.sgtf}"
             module load samtools

@@ -2,7 +2,6 @@
 use strict;
 use Getopt::Long qw(GetOptions);
 use Time::Piece;
-use DBI;
 use File::Basename;
 use Cwd 'abs_path';
 

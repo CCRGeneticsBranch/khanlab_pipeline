@@ -82,7 +82,7 @@ rule RSEM:
             rulename = "RSEM",
             ref = lambda wildcards: config[samples[wildcards.sample]["Genome"]]["rsem_ref_" + wildcards.annotation],
             batch = config['cluster']['job_rsem'],
-            library = lambda wildcards: "--strandedness reverse" if samples[wildcards.sample]['SampleCaptures'] != "polya" else "",
+            library = lambda wildcards: "--strandedness reverse" if samples[wildcards.sample]['Enrichment step'] != "polya" else "",
             paired_end = lambda wildcards: "--paired-end" if samples[wildcards.sample]["PE"] else "",
             log_dir = lambda wildcards: wildcards.sample + '/log',
             work_dir = work_dir
@@ -205,7 +205,7 @@ rule StringTie:
             work_dir = config["work_dir"],
             batch    = config["cluster"]["job_stringtie"],
             rulename = "StringTie",
-            strandness = lambda wildcards: "--rf" if samples[wildcards.sample]['SampleCaptures'] != "polya" else "",
+            strandness = lambda wildcards: "--rf" if samples[wildcards.sample]['Enrichment step'] != "polya" else "",
             ref_gtf = lambda wildcards: config[wildcards.genome]["gtf_" + wildcards.annotation],
             log_dir = lambda wildcards: wildcards.sample + '/log',
     benchmark:
@@ -274,64 +274,6 @@ rule STAR:
             #bamCoverage -b {params.work_dir}/{output.genome_bam} -o $fn.bw
             """
             
-rule xenome_se:
-    input:
-            "{sample}/DATA/{sample}" + suffix_SE,
-    output: 
-            "{sample}/DATA/{sample}.filtered" + suffix_SE,
-    version:
-            config["version"]["xenome"]
-    params:
-            xenome_ref = lambda wildcards: config[samples[wildcards.sample]["Genome"]]["xenome_ref"],
-            fastqs = lambda wildcards: " -i DATA/" + wildcards.sample + "/" + wildcards.sample +  + suffix_SE,
-            work_dir = config["work_dir"],
-            batch    = config["cluster"]["job_xenome"],
-            rulename = "xenome",
-            log_dir = lambda wildcards: wildcards.sample + '/log',
-    shell:
-            """
-            module load xenome
-            xenome classify -P {params.xenome_ref} -M ${{MEM}} -T ${{THREADS}} --graft-name human --host-name mouse {params.fastqs} --output-filename-prefix {wildcards.sample}/DATA/{wildcards.sample}
-            awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_human_1.fastq > {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered.fastq
-            awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_both_1.fastq >> {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered.fastq
-            #awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_ambiguous_1.fastq >> {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered.fastq
-            awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_neither_1.fastq >> {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered.fastq
-            gzip {wildcards.sample}/DATA/{wildcards.sample}.filtered.fastq
-            """
-
-rule xenome_pe:
-    input:
-            "{sample}/DATA/{sample}" + suffix_R1,
-            "{sample}/DATA/{sample}" + suffix_R2,
-    output: 
-            "{sample}/DATA/{sample}.filtered2" + suffix_R1,
-            "{sample}/DATA/{sample}.filtered2" + suffix_R2,
-    version:
-            config["version"]["xenome"]
-    params:
-            xenome_ref = lambda wildcards: config[samples[wildcards.sample]["Genome"]]["xenome_ref"],
-            fastqs = lambda wildcards: " -i DATA/" + wildcards.sample + "/" + wildcards.sample + suffix_R1 + " -i DATA/" + wildcards.sample + "/" + wildcards.sample + suffix_R2,
-            work_dir = config["work_dir"],
-            batch    = config["cluster"]["job_xenome"],
-            rulename = "xenome",
-            log_dir = lambda wildcards: wildcards.sample + '/log',
-    shell:
-            """
-            module load xenome
-            xenome classify -P {params.xenome_ref} -M -M ${{MEM}} -T ${{THREADS}} --graft-name human --host-name mouse {params.fastqs} --pairs --output-filename-prefix {wildcards.sample}/DATA/{wildcards.sample}
-            awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_human_1.fastq > {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered_R1.fastq
-            awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_both_1.fastq >> {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered_R1.fastq
-            #awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_ambiguous_1.fastq >> {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered_R1.fastq
-            awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_neither_1.fastq >> {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered_R1.fastq
-            awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_human_2.fastq > {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered_R2.fastq
-            awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_both_2.fastq >> {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered_R2.fastq
-            #awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_ambiguous_2.fastq >> {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered_R2.fastq
-            awk '{{if (NR % 4 == 1) print "@"$0; else if (NR % 4 == 3) print "+"$0; else print $0 }}' {wildcards.sample}/DATA/{wildcards.sample}_neither_2.fastq >> {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered_R2.fastq
-            gzip {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered_R1.fastq
-            gzip {wildcards.sample}/DATA/{wildcards.sample}/{wildcards.sample}.filtered_R2.fastq
-            
-            """
-
 rule xengsort_pe:
     input:
             R1="{sample}/DATA/{sample}" + suffix_R1,

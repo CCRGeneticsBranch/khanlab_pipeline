@@ -14,7 +14,7 @@ version_common:
     R: "3.4"
     python2: "2.7"
     python3: "3.6"
-    picard: "2.22.2"
+    picard: "2.27.3"
     snakemake: "5.13.0"
     sigularity: "3.6.4"
 cluster_common:

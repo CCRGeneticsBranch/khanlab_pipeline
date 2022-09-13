@@ -13,8 +13,12 @@ try:
     EDENS = []
     RNAseq = []
     COLTRONS = []
+    QC = []
     MACS_BAMS = {}
     for sample_id, sample in samples.items():
+        ##### Test no input
+        sample["Matched normal"] = "."
+        #####
         sample["Genome"] = config["genome"]
         SAMPLES.append(sample_id)
         FASTQS[sample_id] = []
@@ -24,10 +28,10 @@ try:
             sample["PeakCalling"] = "narrow"
         if not "LibrarySize" in sample:
             sample["LibrarySize"] = "."
-        if not "PairedRNA_SAMPLE_ID" in sample:
-            sample["PairedRNA_SAMPLE_ID"] = "."
-        if not "PairedInput" in sample:
-            sample["PairedInput"] = "."
+        if not "Matched RNA-seq lib" in sample:
+            sample["Matched RNA-seq lib"] = "."
+        if not "Matched normal" in sample:
+            sample["Matched normal"] = "."
         if not "EnhancePipe" in sample:
             sample["EnhancePipe"] = "no"
         #add FASTQ targets
@@ -51,15 +55,15 @@ try:
             raise Exception('Genome not found in sample sheet')
         if "SpikeIn" in sample and sample["SpikeIn"] == "yes":
             #only add script targets once
-            if not "SpikeInGenome" in sample:
-                raise Exception('SpikeInGenome not found in sample sheet')
-            spike_in_genome = sample["SpikeInGenome"]
+            if not "SpikeIn_genome" in sample:
+                raise Exception('SpikeIn_genome not found in sample sheet')
+            spike_in_genome = sample["SpikeIn_genome"]
             BWS.append(sample_id + "/" + sample_id + "." + config["bin_size"] + ".scaled.bw")
             TDFS.append(sample_id + "/" + sample_id + "." + config["bin_size"] + ".scaled.tdf")
         else:
             sample["SpikeIn"] == "no"
-            sample["SpikeInGenome"] == ""
-        if not "LibrarySize" in sample or samples[sample_id]["LibrarySize"] == ".":
+            sample["SpikeIn_genome"] == ""
+        if not "LibrarySize" in sample or samples[sample_id]["LibrarySize"] == "." or samples[sample_id]["LibrarySize"] == "":
             samples[sample_id]["LibrarySize"] = config["default_lib_length"]
         BAMS.append(sample_id + "/" + sample_id + ".bam")        
         MACS_BAMS[sample_id].append(sample_id + "/" + sample_id + ".bam")
@@ -67,9 +71,11 @@ try:
         TDFS.append(sample_id + "/" + sample_id + "." + config["bin_size"] + ".RPM.tdf")
         SPP.append(sample_id + "/qc/" + sample_id + ".spp.pdf")
         SPP.append(sample_id + "/qc/" + sample_id + ".spp.txt")
-        has_exp = sample["PairedRNA_SAMPLE_ID"] != "."
+        QC.append(sample_id + "/qc/fingerPrint.pdf")
+        QC.append(sample_id + "/qc/fingerPrint.tab")
+        has_exp = "Matched RNA-seq lib" in sample and sample["Matched RNA-seq lib"] != "." and sample["Matched RNA-seq lib"] != ""
         if has_exp:
-            RNAseq.append(sample_id + "/RNAseq/" + sample["PairedRNA_SAMPLE_ID"] + "." +  sample["Genome"] + ".ucsc.genes.TPM.txt")
+            RNAseq.append(sample_id + "/RNAseq/" + sample["Matched RNA-seq lib"] + "." +  sample["Genome"] + ".ucsc.genes.TPM.txt")
         cutoff_types = ["p","q"]
         for cutoff_type in cutoff_types:
             for cutoff_value in config["macs2"][cutoff_type + "values"]:
@@ -93,23 +99,24 @@ try:
                         ROSE.append(sample_id + macs_out_prefix + cutoff + "/ROSE_out_" + str(config["rose"]["stitch_distance"]) + "/" + sample_id + ".regular_summits.bed")
                         MOTIFS.append(sample_id + macs_out_prefix + cutoff + "/ROSE_out_" + str(config["rose"]["stitch_distance"]) + "/motif_super/knownResults.html")
                         MOTIFS.append(sample_id + macs_out_prefix + cutoff + "/ROSE_out_" + str(config["rose"]["stitch_distance"]) + "/motif_regular/knownResults.html")
-                    COLTRONS.append(sample_id + macs_out_prefix + cutoff + "/ROSE_out_" + str(config["rose"]["stitch_distance"]) + "/coltron/" + sample_id + "_CLIQUES_RANKED.txt")
                     if has_exp:
+                        COLTRONS.append(sample_id + macs_out_prefix + cutoff + "/ROSE_out_" + str(config["rose"]["stitch_distance"]) + "/coltron/" + sample_id + "_CLIQUES_RANKED.txt")
                         EDENS.append(sample_id + macs_out_prefix + cutoff + "/ROSE_out_" + str(config["rose"]["stitch_distance"]) + "/" + sample_id + "_peaks_AllEnhancers.table.super_TPM" + str(config["eden"]["TPM_cutoff"]) + "_multi-genes.txt")
                         EDENS.append(sample_id + macs_out_prefix + cutoff + "/ROSE_out_" + str(config["rose"]["stitch_distance"]) + "/" + sample_id + "_peaks_AllEnhancers.table.regular_TPM" + str(config["eden"]["TPM_cutoff"]) + "_multi-genes.txt")
         
         # if input sample not exists, generate bam file
-        input_sample_id = sample["PairedInput"]
+        input_sample_id = sample["Matched normal"]
         input_sample_file = config["FASTQ_prefix"] + input_sample_id
-        if input_sample_id != ".":
+        if input_sample_id != "." and input_sample_id != "":
             input_sample = {}
             input_sample["Genome"] = sample["Genome"]
             input_sample["LibrarySize"] = sample["LibrarySize"]
             input_sample["SampleFiles"] = input_sample_file
             input_sample["SpikeIn"] = "no"
-            input_sample["SpikeInGenome"] = ""
+            input_sample["SpikeIn_genome"] = ""
             samples[input_sample_id] = input_sample
             BAMS.append(input_sample_id + "/" + input_sample_id + ".bam")
+            BWS.append(input_sample_id + "/" + input_sample_id + "." + config["bin_size"] + ".RPM.bw")
             MACS_BAMS[sample_id].append(input_sample_id + "/" + input_sample_id + ".bam")
             FASTQS[input_sample_id] = []
             if os.path.exists(data_dir + "/" + input_sample_file + "/" + input_sample_file + suffix_R2):
@@ -132,13 +139,13 @@ except Exception as err:
     shell("echo 'ChIPseq pipeline has exception: reason " + contents + ". Working Dir:  {work_dir}' |mutt -e 'my_hdr From:chouh@nih.gov' -s 'Khanlab ChIPseq Pipeline Status' `whoami`@mail.nih.gov {emails} ")
     sys.exit()
     
-TARGETS = FASTQCS + BAMS + BWS + TDFS + SPP + MACS2 + ANNOTATION + ROSE + MOTIFS + EDENS + RNAseq + COLTRONS
+TARGETS = FASTQCS + BAMS + BWS + TDFS + SPP + MACS2 + ANNOTATION + ROSE + MOTIFS + EDENS + RNAseq + COLTRONS + QC
 
 localrules: all, prepareFASTQ, EDEN, prepareSummit, prepareRoseSummit
 
 rule RNAseq_pipeline:
     input:
-            config["work_dir"] + "/../rnaseq"
+            config["work_dir"] + "/../../RNAseq"
     output:
             "{sample}/RNAseq/{rnaseq_sample}.{genome}.ucsc.genes.TPM.txt"
     version:
@@ -151,7 +158,7 @@ rule RNAseq_pipeline:
             pipeline_home = config["pipeline_home"],
             genome = lambda wildcards: samples[wildcards.sample]["Genome"],
             rulename = "RNAseq_pipeline",
-            rnaseq_sample = lambda wildcards: samples[wildcards.sample]["PairedRNA_SAMPLE_ID"],
+            rnaseq_sample = lambda wildcards: samples[wildcards.sample]["Matched RNA-seq lib"],
             log_dir = lambda wildcards: wildcards.sample + '/log',
             gene_bed = lambda wildcards: config[samples[wildcards.sample]["Genome"]]["gene_bed"],
             version_python=config["version_common"]["python3"]
@@ -161,16 +168,16 @@ rule RNAseq_pipeline:
             module load python/{params.version_python}
             python {params.pipeline_home}/scripts/sampleToYaml.py -s {params.rnaseq_sample} -o {wildcards.sample}/RNAseq/{params.rnaseq_sample}.rnaseq.yaml
             module load snakemake/{version}
-            {params.pipeline_home}/launch -t rnaseq -w {params.work_dir}/../rnaseq -s {wildcards.sample}/RNAseq/{params.rnaseq_sample}.rnaseq.yaml -local
+            {params.pipeline_home}/launch -t rnaseq -w {params.work_dir}/../../RNAseq -s {wildcards.sample}/RNAseq/{params.rnaseq_sample}.rnaseq.yaml -local
             echo -e "Chr\\tStart\\tStop\\tGeneID\\tTPM" > {output}
-            join -t $'\\t' -1 4 -2 1 <(sort -k4,4 {params.pipeline_home}/ref/{params.gene_bed} ) <(grep -v gene_id {params.work_dir}/../rnaseq/{params.rnaseq_sample}/RSEM_{params.genome}_ucsc/{params.rnaseq_sample}.{params.genome}.ucsc.genes.results|sort -k1,1) | awk -F'\\t' 'OFS="\\t"{{print $2,$3,$4,$1,$10}}' | sort -k 1,1 -k2,2n >> {output}
+            join -t $'\\t' -1 4 -2 1 <(sort -k4,4 {params.pipeline_home}/{params.gene_bed} ) <(grep -v gene_id {params.work_dir}/../../RNAseq/{params.rnaseq_sample}/RSEM_{params.genome}_ucsc/{params.rnaseq_sample}.{params.genome}.ucsc.genes.results|sort -k1,1) | awk -F'\\t' 'OFS="\\t"{{print $2,$3,$4,$1,$10}}' | sort -k 1,1 -k2,2n >> {output}
             """
 
 rule coltron:
     input:
             rose_out="{sample}/{macs_dir}/{rose_dir}/{sample}_peaks_AllEnhancers.table.txt",
             bam="{sample}/{sample}.bam",
-            exp_file=lambda wildcards: wildcards.sample + "/RNAseq/" +  samples[wildcards.sample]["PairedRNA_SAMPLE_ID"] + "." + samples[wildcards.sample]["Genome"] + ".ucsc.genes.TPM.txt"
+            exp_file=lambda wildcards: wildcards.sample + "/RNAseq/" +  samples[wildcards.sample]["Matched RNA-seq lib"] + "." + samples[wildcards.sample]["Genome"] + ".ucsc.genes.TPM.txt"
     output:
             "{sample}/{macs_dir}/{rose_dir}/coltron/{sample}_CLIQUES_RANKED.txt"
     benchmark:
@@ -181,7 +188,7 @@ rule coltron:
             work_dir = config["work_dir"],
             batch    = config["cluster_common"]["small"],
             pipeline_home = config["pipeline_home"],
-            coltron_bin = lambda wildcards: config["coltron"]["path"] if samples[wildcards.sample]["PairedRNA_SAMPLE_ID"] != "." else config["coltron"]["path_noexp"],
+            coltron_bin = lambda wildcards: config["coltron"]["path"] if samples[wildcards.sample]["Matched RNA-seq lib"] != "." and samples[wildcards.sample]["Matched RNA-seq lib"] != "" else config["coltron"]["path_noexp"],
             genome = lambda wildcards: samples[wildcards.sample]["Genome"].upper(),
             nearest_tf_distance_cutoff = str(config["coltron"]["nearest_tf_distance_cutoff"]),
             exp_cutoff=str(config["coltron"]["nearest_tf_distance_cutoff"]),
@@ -201,7 +208,7 @@ rule coltron:
 rule EDEN:
     input:
             bed=lambda wildcards: wildcards.sample + "/" + wildcards.folders + "/" +  wildcards.sample + "_" + wildcards.prefix + ".bed",
-            exp_file=lambda wildcards: wildcards.sample + "/RNAseq/" +  samples[wildcards.sample]["PairedRNA_SAMPLE_ID"] + "." + samples[wildcards.sample]["Genome"] + ".ucsc.genes.TPM.txt"
+            exp_file=lambda wildcards: wildcards.sample + "/RNAseq/" +  samples[wildcards.sample]["Matched RNA-seq lib"] + "." + samples[wildcards.sample]["Genome"] + ".ucsc.genes.TPM.txt"
     output:
             "{sample}/{folders}/{sample}_{prefix}_TPM{TPM_cutoff}_multi-genes.txt"
     wildcard_constraints:
@@ -214,7 +221,7 @@ rule EDEN:
             genome = lambda wildcards: samples[wildcards.sample]["Genome"],
             super_loci_distance_cutoff = str(config["eden"]["super_loci_distance_cutoff"]),
             nearest_gene_distance_cutoff = str(config["eden"]["nearest_gene_distance_cutoff"]),
-            exp_file = lambda wildcards: samples[wildcards.sample]["PairedRNA_SAMPLE_ID"] + ".gene.TPM.txt",
+            exp_file = lambda wildcards: samples[wildcards.sample]["Matched RNA-seq lib"] + ".gene.TPM.txt",
             gene_bed = lambda wildcards: config[samples[wildcards.sample]["Genome"]]["gene_bed"],
             rulename = "eden",
             log_dir = lambda wildcards: wildcards.sample + '/log',
@@ -248,7 +255,11 @@ rule findMotif:
             """  
             module load homer/{version}
             out_dir=$(dirname {output})
-            findMotifsGenome.pl {input} {params.genome} ${{out_dir}} -size {params.motif_size} -p ${{THREADS}} -preparsedDir {params.pipeline_home}/ref/preparsedDir
+            if [ -s {input} ];then
+                findMotifsGenome.pl {input} {params.genome} ${{out_dir}} -size {params.motif_size} -p ${{THREADS}} -preparsedDir {params.pipeline_home}/ref/preparsedDir
+            else
+                touch {output}
+            fi
             """
 
 rule prepareRoseSummit:
@@ -299,7 +310,7 @@ rule rose:
             tss_bed=lambda wildcards: config["pipeline_home"] + "/" + config[samples[wildcards.sample]["Genome"]]["tss_bed"],
             genome = lambda wildcards: samples[wildcards.sample]["Genome"].upper(),
             annotation = lambda wildcards: config[samples[wildcards.sample]["Genome"]]["rose"],
-            input_control = lambda wildcards: " -c " + config["work_dir"] + "/" + samples[wildcards.sample]["PairedInput"] + "/" + samples[wildcards.sample]["PairedInput"] + ".bam" if samples[wildcards.sample]["PairedInput"] != "." else "",
+            input_control = lambda wildcards: " -c " + config["work_dir"] + "/" + samples[wildcards.sample]["Matched normal"] + "/" + samples[wildcards.sample]["Matched normal"] + ".bam" if samples[wildcards.sample]["Matched normal"] != "." and samples[wildcards.sample]["Matched normal"] != "" else "",
             rulename = "rose",
             log_dir = lambda wildcards: wildcards.sample + '/log',
             version_R=config["version_common"]["R"],
@@ -400,8 +411,8 @@ rule macs2:
             bam_format = lambda wildcards: " BAMPE " if samples[wildcards.sample]["PE"] else "BAM",
             peak_type = lambda wildcards: " --broad " if wildcards.peak_type=="broad" else "",
             dup_cutoff = config["dup_cutoff"],
-            cutoff_option = lambda wildcards: "--broad-cutoff " + wildcards.cutoff if wildcards.peak_type=="broad" else " -" + wildcards.cutoff_type + " " + wildcards.cutoff,
-            input_control = lambda wildcards: " -c " + samples[wildcards.sample]["PairedInput"] + "/" + samples[wildcards.sample]["PairedInput"] + ".bam" if samples[wildcards.sample]["PairedInput"] != "." else "",
+            cutoff_option = lambda wildcards: " -" + wildcards.cutoff_type + " " + wildcards.cutoff + " --broad-cutoff " + wildcards.cutoff if wildcards.peak_type=="broad" else " -" + wildcards.cutoff_type + " " + wildcards.cutoff,
+            input_control = lambda wildcards: " -c " + samples[wildcards.sample]["Matched normal"] + "/" + samples[wildcards.sample]["Matched normal"] + ".bam" if samples[wildcards.sample]["Matched normal"] != "." and samples[wildcards.sample]["Matched normal"] != "" else "",
             black_list= lambda wildcards: config["pipeline_home"] + "/" + config[samples[wildcards.sample]["Genome"]]["black_list"],
             exclude_chr_list = lambda wildcards: config["pipeline_home"] + "/" + config[samples[wildcards.sample]["Genome"]]["exclude_chr_list"],
             log_dir = lambda wildcards: wildcards.sample + '/log',
@@ -423,6 +434,37 @@ rule macs2:
             cut -f1-3 {output.nobl} > {output.great}            
             """
 
+rule plotFingerPrint:
+    input:
+            lambda wildcards: MACS_BAMS[wildcards.sample]
+    output:
+            pdf="{sample}/qc/fingerPrint.pdf",
+            table="{sample}/qc/fingerPrint.tab"
+    version:
+            config["version"]["deeptools"],
+    benchmark:
+            "{sample}/benchmark/plotFingerPrint.{sample}.benchmark.txt"
+    params:
+            work_dir = config["work_dir"],
+            batch    = config["cluster"]["job_macs2"],
+            pipeline_home=config["pipeline_home"],
+            rulename = "plotFingerPrint",
+            bam_list = lambda wildcards: ' '.join(MACS_BAMS[wildcards.sample]),
+            ext_len = lambda wildcards: str(samples[wildcards.sample]["LibrarySize"]),
+            log_dir = lambda wildcards: wildcards.sample + '/log'            
+    shell:
+            """  
+            module load deeptools/{version}
+            plotFingerprint \
+                -b {params.bam_list} \
+                --smartLabels \
+                --minMappingQuality 30 --skipZeros \
+                -e {params.ext_len} \
+                -T "Fingerprints"  \
+                -p ${{THREADS}} \
+                --plotFile {output.pdf} \
+                --outRawCounts {output.table}
+            """ 
 rule crossCorrelation:
     input:
             "{sample}/{sample}.bam"
@@ -540,7 +582,7 @@ rule makeBigWig:
                 factor=`echo "1000000/${{spike_count}}" | bc -l`
                 norm_param=" --scaleFactor ${{factor}} "
             fi
-            bamCoverage -b {input} -o {output} -p ${{THREADS}} --smoothLength {params.smooth_size} ${{keep_dup}} --binSize {wildcards.bin_size} -e {params.lib_size} ${{norm_param}}
+            bamCoverage -b {input} -o {output} -of bigwig -p ${{THREADS}} --smoothLength {params.smooth_size} ${{keep_dup}} --binSize {wildcards.bin_size} -e {params.lib_size} ${{norm_param}}
             
             """
 rule BWA:
@@ -552,14 +594,14 @@ rule BWA:
     version:
             config["version"]["bwa"]
     params:
-            bwa_idx = lambda wildcards: config[samples[wildcards.sample]["Genome"]]["bwa_index"] + ".fa" if samples[wildcards.sample]["SpikeIn"] != "yes" else config[samples[wildcards.sample]["Genome"]]["bwa_index"] + "." + samples[wildcards.sample]["SpikeInGenome"] + ".fa",
+            bwa_idx = lambda wildcards: config[samples[wildcards.sample]["Genome"]]["bwa_index"] + ".fa" if samples[wildcards.sample]["SpikeIn"] != "yes" else config[samples[wildcards.sample]["Genome"]]["bwa_index"] + "." + samples[wildcards.sample]["SpikeIn_genome"] + ".fa",
             fastqs = lambda wildcards: " ".join(work_dir + '/' + x for x in FASTQS[wildcards.sample]),
             work_dir = config["work_dir"],
             batch    = config["cluster"]["job_bwa"],
             rulename = "BWA",
             genome = lambda wildcards: samples[wildcards.sample]["Genome"],
             spikeIn = lambda wildcards: samples[wildcards.sample]["SpikeIn"],
-            spikeInGenome = lambda wildcards: samples[wildcards.sample]["SpikeInGenome"],
+            SpikeIn_genome = lambda wildcards: samples[wildcards.sample]["SpikeIn_genome"],
             min_mapq = config["min_mapq"],            
             log_dir = lambda wildcards: wildcards.sample + '/log',
             version_samtools=config["version_common"]["samtools"],
@@ -584,20 +626,20 @@ rule BWA:
                 wait
                 echo "done split finished"
                 mkdir -p {params.work_dir}/{wildcards.sample}/SpikeIn
-                samtools merge -@ ${{THREADS}} -f {wildcards.sample}.{params.spikeInGenome}.bam {wildcards.sample}.{params.spikeInGenome}_*.bam
+                samtools merge -@ ${{THREADS}} -f {wildcards.sample}.{params.SpikeIn_genome}.bam {wildcards.sample}.{params.SpikeIn_genome}_*.bam
                 samtools merge -@ ${{THREADS}} -f {wildcards.sample}.{params.genome}.bam {wildcards.sample}.chr*.bam
                 samtools index -@ ${{THREADS}} {wildcards.sample}.{params.genome}.bam
-                samtools index -@ ${{THREADS}} {wildcards.sample}.{params.spikeInGenome}.bam
-                java -jar $PICARDJARPATH/picard.jar MarkDuplicates AS=true M={wildcards.sample}.{params.spikeInGenome}.metrix.txt I={wildcards.sample}.{params.spikeInGenome}.bam O={wildcards.sample}.{params.spikeInGenome}.dd.bam REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT
+                samtools index -@ ${{THREADS}} {wildcards.sample}.{params.SpikeIn_genome}.bam
+                java -jar $PICARDJARPATH/picard.jar MarkDuplicates AS=true M={wildcards.sample}.{params.SpikeIn_genome}.metrix.txt I={wildcards.sample}.{params.SpikeIn_genome}.bam O={wildcards.sample}.{params.SpikeIn_genome}.dd.bam REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT
                 java -jar $PICARDJARPATH/picard.jar MarkDuplicates AS=true M={wildcards.sample}.{params.genome}.metrix.txt I={wildcards.sample}.{params.genome}.bam O={wildcards.sample}.{params.genome}.dd.bam REMOVE_DUPLICATES=false VALIDATION_STRINGENCY=SILENT
-                samtools index -@ ${{THREADS}} {wildcards.sample}.{params.spikeInGenome}.dd.bam
+                samtools index -@ ${{THREADS}} {wildcards.sample}.{params.SpikeIn_genome}.dd.bam
                 samtools index -@ ${{THREADS}} {wildcards.sample}.{params.genome}.dd.bam
-                samtools flagstat -@ ${{THREADS}} {wildcards.sample}.{params.spikeInGenome}.dd.bam > {wildcards.sample}.{params.spikeInGenome}.flagstat.txt
+                samtools flagstat -@ ${{THREADS}} {wildcards.sample}.{params.SpikeIn_genome}.dd.bam > {wildcards.sample}.{params.SpikeIn_genome}.flagstat.txt
                 samtools flagstat -@ ${{THREADS}} {wildcards.sample}.{params.genome}.dd.bam > {wildcards.sample}.{params.genome}.flagstat.txt
-                mapped_spikeIn=`grep mapped {wildcards.sample}.{params.spikeInGenome}.flagstat.txt | head -1 | cut -d' ' -f1`
+                mapped_spikeIn=`grep mapped {wildcards.sample}.{params.SpikeIn_genome}.flagstat.txt | head -1 | cut -d' ' -f1`
                 mapped_ref=`grep mapped {wildcards.sample}.{params.genome}.flagstat.txt | head -1 | cut -d' ' -f1`
-                echo -e "{params.genome}\t{params.spikeInGenome}\n${{mapped_ref}}\t${{mapped_spikeIn}}" > {params.work_dir}/{wildcards.sample}/SpikeIn/spike_map_summary
-                #mv {wildcards.sample}.{params.spikeInGenome}.* {params.work_dir}/{wildcards.sample}/SpikeIn/
+                echo -e "{params.genome}\t{params.SpikeIn_genome}\n${{mapped_ref}}\t${{mapped_spikeIn}}" > {params.work_dir}/{wildcards.sample}/SpikeIn/spike_map_summary
+                #mv {wildcards.sample}.{params.SpikeIn_genome}.* {params.work_dir}/{wildcards.sample}/SpikeIn/
                 #mv {wildcards.sample}.{params.genome}.bam {params.work_dir}/{wildcards.sample}/{wildcards.sample}.bam
                 #mv {wildcards.sample}.{params.genome}.bam.bai {params.work_dir}/{wildcards.sample}/{wildcards.sample}.bam.bai
                 
@@ -609,7 +651,7 @@ rule BWA:
                 #mv {wildcards.sample}.bam.bai {params.work_dir}/{wildcards.sample}
             fi
             #move output files
-            bam_f={params.work_dir}/{wildcards.sample}/{wildcards.sample}.bam
+            bam_f={params.work_dir}/{wildcards.sample}/{wildcards.sample}.bam            
             flag_f={params.work_dir}/{wildcards.sample}/{wildcards.sample}.flagstat.txt
             cp {wildcards.sample}.{params.genome}.dd.bam ${{bam_f}}
             cp {wildcards.sample}.{params.genome}.dd.bam.bai ${{bam_f}}.bai
@@ -653,5 +695,7 @@ rule prepareFASTQ:
             mkdir -p {wildcards.sample}
             mkdir -p {wildcards.sample}/log
             mkdir -p {wildcards.sample}/DATA
-            ln -s {input} {output}
+            if [[ ! -L {output} ]];then
+                ln -s {input} {output}
+            fi
             """

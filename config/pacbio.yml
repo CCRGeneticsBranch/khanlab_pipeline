@@ -5,7 +5,7 @@ apps:
     cdna_cupcake_sif: "/data/Clinomics/apps/cdna_cupcake/cdna_cupcake_latest.sif"
     polya: "/data/Clinomics/apps/sqanti3/polyA.list"
     conda_home: "/data/khanlab/projects/hsienchao/conda"
-    conda_env: "SQANTI3.env"
+    conda_env: "/data/FunctionalGeneticsGB/apps/SQANTI3.env"
 cluster:
     targeted:
         job_lima: "--partition=ccr,quick --time=4:00:00 --mem=16G  --cpus-per-task=1"
