@@ -15,7 +15,7 @@ def main(args):
     sample_id = args.sample.strip()
     out_file = args.out.strip()
     masterfile_dir="/data/Clinomics/MasterFiles"
-    master_files = ["Sequencing_Tracking_Master_db.txt","ClinOmics_Sequencing_Master_File_db.txt","SequencingMasterFile_OutsidePatients_db.txt"]
+    master_files = ["Sequencing_Tracking_Master_db.txt","ClinOmics_Sequencing_Master_File_db.txt","SequencingMasterFile_OutsidePatients_db.txt","gb_master_file.txt"]
     #sample information from Young's master file
     sample_file = "Sample_" + sample_id
     master_sample = {}
