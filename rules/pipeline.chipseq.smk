@@ -16,9 +16,6 @@ try:
     QC = []
     MACS_BAMS = {}
     for sample_id, sample in samples.items():
-        ##### Test no input
-        sample["Matched normal"] = "."
-        #####
         sample["Genome"] = config["genome"]
         SAMPLES.append(sample_id)
         FASTQS[sample_id] = []
