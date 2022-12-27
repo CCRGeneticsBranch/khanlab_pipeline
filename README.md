@@ -190,7 +190,7 @@ samples:
 5. LibrarySize           (optional)
 6. EnhancePipe (yes, no)
 7. PeakCalling (narrow, broad)
-8. PairedRNA_SAMPLE_ID   (optional)
+8. Matched RNA-seq lib   (optional)
 
 ## <a name="expChIPseq"></a>ChIPseq Example:
 
@@ -199,7 +199,7 @@ samples:
 ```
 samples:
   RH4_D6_H3K27ac_018_C_HWC77BGXY:
-    PairedInput: RH4_Input_001_C_H5TLGBGXX
+    Matched normal: RH4_Input_001_C_H5TLGBGXX
     Genome: hg38
     SampleFiles: Sample_RH4_D6_H3K27ac_018_C_HWC77BGXY
     SpikeIn: 'yes'
@@ -207,7 +207,7 @@ samples:
     LibrarySize: 250
     EnhancePipe: 'yes'
     PeakCalling: narrow
-    PairedRNA_SAMPLE_ID: Rh4_dmso_6h_rz_T_H3YCHBGXX
+    Matched RNA-seq lib: Rh4_dmso_6h_rz_T_H3YCHBGXX
 
 ```
 
@@ -216,7 +216,7 @@ samples:
 ```
 samples:
   RH4_D6_BRD4_024_C_HLFMLBGX3:
-    PairedInput: RH4_Input_001_C_H5TLGBGXX
+    Matched normal: RH4_Input_001_C_H5TLGBGXX
     Genome: hg38
     SampleFiles: Sample_RH4_D6_BRD4_024_C_HLFMLBGX3
     SpikeIn: 'yes'
@@ -224,7 +224,7 @@ samples:
     LibrarySize: 250
     EnhancePipe: 'no'
     PeakCalling: narrow
-    PairedRNA_SAMPLE_ID: RH4_D6_T_HVNVFBGX2
+    Matched RNA-seq lib: RH4_D6_T_HVNVFBGX2
 ```
 
 #### Output
