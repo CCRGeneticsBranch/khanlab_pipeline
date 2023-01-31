@@ -58,8 +58,8 @@ try:
             BWS.append(sample_id + "/" + sample_id + "." + config["bin_size"] + ".scaled.bw")
             TDFS.append(sample_id + "/" + sample_id + "." + config["bin_size"] + ".scaled.tdf")
         else:
-            sample["SpikeIn"] == "no"
-            sample["SpikeIn_genome"] == ""
+            sample["SpikeIn"] = "no"
+            sample["SpikeIn_genome"] = ""
         if not "LibrarySize" in sample or samples[sample_id]["LibrarySize"] == "." or samples[sample_id]["LibrarySize"] == "":
             samples[sample_id]["LibrarySize"] = config["default_lib_length"]
         BAMS.append(sample_id + "/" + sample_id + ".bam")        

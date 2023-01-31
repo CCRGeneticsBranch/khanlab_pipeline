@@ -18,7 +18,7 @@ my $dryrun;
 my $local;
 my $dag;
 my $help;
-my $walltime = "2-00:00:00";
+my $walltime = "30:00:00";
 my $partition = "ccr,norm";
 
 #$pipeline_home = readpipe()
