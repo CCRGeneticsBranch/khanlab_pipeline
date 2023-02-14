@@ -418,7 +418,7 @@ rule macs2:
             """  
             module load macs/{version}
             module load bedtools/{params.version_bedtools}
-            dup=`cut -f3 {wildcards.sample}/qc/mapping_summary.txt`
+            dup=`cut -f4 {wildcards.sample}/qc/mapping_summary.txt`
             keep_dup="all"
             if (( $(echo "$dup > {params.dup_cutoff}" |bc -l) )); then
                 keep_dup="1"
