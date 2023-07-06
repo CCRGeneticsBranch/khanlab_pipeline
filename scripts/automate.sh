@@ -21,7 +21,7 @@ else
 	exit
 fi
 
-module load python/3.7
+module load python/3.8
 
 #type=`python $pipeline_home/scripts/sampleToYaml.py -s $sample_id -o ${sample_id}.yaml -c /data/khanlab/projects/ChIP_seq/manage_samples/ChIP_seq_samples_hc.xlsx`
 #res_str=`python $pipeline_home/scripts/sampleToYaml.py -s $sample_id -o ${sample_id}.yaml -c /data/khanlab/projects/ChIP_seq/manage_samples/ChIP_seq_samples_hc.xlsx`

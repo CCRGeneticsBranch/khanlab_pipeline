@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-module load snakemake/5.13.0
+module load snakemake/5.24.1
 
 snakemake --directory $work_dir --snakefile $snakefile --configfile $sheet --config type=$type \
 	pipeline_home=$pipeline_home work_dir=$work_dir data_dir=$data_dir genome=$genome now=$now \

@@ -66,8 +66,8 @@ try:
         MACS_BAMS[sample_id].append(sample_id + "/" + sample_id + ".bam")
         BWS.append(sample_id + "/" + sample_id + "." + config["bin_size"] + ".RPM.bw")
         TDFS.append(sample_id + "/" + sample_id + "." + config["bin_size"] + ".RPM.tdf")
-        SPP.append(sample_id + "/qc/" + sample_id + ".spp.pdf")
-        SPP.append(sample_id + "/qc/" + sample_id + ".spp.txt")
+        #SPP.append(sample_id + "/qc/" + sample_id + ".spp.pdf")
+        #SPP.append(sample_id + "/qc/" + sample_id + ".spp.txt")
         QC.append(sample_id + "/qc/fingerPrint.pdf")
         QC.append(sample_id + "/qc/fingerPrint.tab")
         has_exp = "Matched RNA-seq lib" in sample and sample["Matched RNA-seq lib"] != "." and sample["Matched RNA-seq lib"] != ""

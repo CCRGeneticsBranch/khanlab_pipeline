@@ -5,9 +5,9 @@ cluster:
     job_motif: "--partition=ccr,norm --time=10:00:00 --mem=48G  --cpus-per-task=24  --gres=lscratch:100"
 version:
     bwa: "0.7.17"    
-    macs: "2.2.6"
+    macs: "2.2.7.1"
     deeptools: "3.5.0"
-    igvtools: "2.8.2"
+    igvtools: "2.12.3"
     homer: "4.11.1"
     rose: "20200707"
     bamliquidator: "1.3.8"
