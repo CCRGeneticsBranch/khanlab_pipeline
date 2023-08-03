@@ -23,6 +23,8 @@ try:
         #add default values
         if not "PeakCalling" in sample:
             sample["PeakCalling"] = "narrow"
+        if sample["PeakCalling"] == "" or sample["PeakCalling"] == ".":
+            sample["PeakCalling"] = "narrow"
         if not "LibrarySize" in sample:
             sample["LibrarySize"] = "."
         if not "Matched RNA-seq lib" in sample:
@@ -287,7 +289,7 @@ rule rose:
             #bed="{sample}/MACS_Out_{cutoff}/{sample}_peaks.{peak_type}Peak.nobl.no_TSS.bed",
             bam="{sample}/{sample}.bam"
     output:
-            rose_out="{sample}/MACS_Out_{cutoff}/ROSE_out_{stitch_distance}/{sample}_peaks_AllEnhancers.table.txt",
+            rose_out="{sample}/MACS_Out_{cutoff}/ROSE_out_{stitch_distance}/{sample}_peaks_SuperStitched.table.txt",
             se_table="{sample}/MACS_Out_{cutoff}/ROSE_out_{stitch_distance}/{sample}_peaks_AllEnhancers.table.super.bed",
             re_table="{sample}/MACS_Out_{cutoff}/ROSE_out_{stitch_distance}/{sample}_peaks_AllEnhancers.table.regular.bed",
             se_great="{sample}/MACS_Out_{cutoff}/ROSE_out_{stitch_distance}/{sample}_peaks_AllEnhancers.table.super.GREAT.bed",
@@ -305,7 +307,7 @@ rule rose:
             peak_type = lambda wildcards: samples[wildcards.sample]["PeakCalling"],
             tss_distance=config["rose"]["tss_distance"],
             tss_bed=lambda wildcards: config["pipeline_home"] + "/" + config[samples[wildcards.sample]["Genome"]]["tss_bed"],
-            genome = lambda wildcards: samples[wildcards.sample]["Genome"].upper(),
+            genome = lambda wildcards: samples[wildcards.sample]["Genome"],
             annotation = lambda wildcards: config[samples[wildcards.sample]["Genome"]]["rose"],
             input_control = lambda wildcards: " -c " + config["work_dir"] + "/" + samples[wildcards.sample]["Matched normal"] + "/" + samples[wildcards.sample]["Matched normal"] + ".bam" if samples[wildcards.sample]["Matched normal"] != "." and samples[wildcards.sample]["Matched normal"] != "" else "",
             rulename = "rose",
@@ -318,15 +320,11 @@ rule rose:
             module load bedtools/{params.version_bedtools}
             bedtools intersect -a {input.bed} -b {params.tss_bed} -v > {wildcards.sample}/MACS_Out_{wildcards.cutoff}/{wildcards.sample}_peaks.{params.peak_type}Peak.nobl.no_TSS.bed
             bedtools merge -i {wildcards.sample}/MACS_Out_{wildcards.cutoff}/{wildcards.sample}_peaks.{params.peak_type}Peak.nobl.no_TSS.bed -d {wildcards.stitch_distance} -c 4,5,6 -o distinct,sum,distinct > {wildcards.sample}/MACS_Out_{wildcards.cutoff}/{wildcards.sample}_peaks.{params.peak_type}Peak.nobl.no_TSS_{wildcards.stitch_distance}.bed
-            module load rose/{version}
-            #module load bamliquidator
-            module load python/{params.version_python}
             module load R/{params.version_R}
-            #cd /usr/local/apps/bamliquidator/pipeline
-            cd $(dirname `which ROSE_main.py`)
-            #cd {params.pipeline_home}/apps/rose
-            #export PATH=$PATH:{params.pipeline_home}/apps/rose
-            ./ROSE_main.py -i {params.work_dir}/{wildcards.sample}/MACS_Out_{wildcards.cutoff}/{wildcards.sample}_peaks.{params.peak_type}Peak.nobl.no_TSS_{wildcards.stitch_distance}.bed -g {params.genome} -r {params.work_dir}/{input.bam} {params.input_control} -t {params.tss_distance} -s {wildcards.stitch_distance} -o {params.work_dir}/{wildcards.sample}/MACS_Out_{wildcards.cutoff}/ROSE_out_{wildcards.stitch_distance}
+            module load samtools
+            export PATH=$PATH:{params.pipeline_home}/apps/ROSE/bin
+            export PYTHONPATH={params.pipeline_home}/apps/ROSE/lib
+            ROSE_main.py -i {params.work_dir}/{wildcards.sample}/MACS_Out_{wildcards.cutoff}/{wildcards.sample}_peaks.{params.peak_type}Peak.nobl.no_TSS_{wildcards.stitch_distance}.bed --custom {params.pipeline_home}/apps/ROSE/annotation/{params.genome}_refseq.ucsc -r {params.work_dir}/{input.bam} {params.input_control} -t {params.tss_distance} -s {wildcards.stitch_distance} -o {params.work_dir}/{wildcards.sample}/MACS_Out_{wildcards.cutoff}/ROSE_out_{wildcards.stitch_distance}
             {params.pipeline_home}/scripts/roseTable2Bed.sh {params.work_dir}/{output.rose_out} {params.work_dir}/{output.re_table} {params.work_dir}/{output.se_table}
             cd {params.work_dir}
             cut -f1-3 {output.se_table} > {output.se_great}

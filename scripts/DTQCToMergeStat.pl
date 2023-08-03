@@ -20,7 +20,7 @@ while(<IN_FILE>) {
 	my $pct = substr($_, 57);
 	$key =~ s/\s+$//;
 	$value =~ s/,//g;
-	$data{$key} = $value;
+	$data{$key} = $value;	
 	print OUT_DT "$key\t$value\t$pct\n";
 }
 close(OUT_DT);
