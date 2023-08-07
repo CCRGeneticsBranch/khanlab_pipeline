@@ -11,6 +11,7 @@ data_dir = config['data_dir']
 work_dir = config['work_dir']
 pipeline_type = config['type']
 pipeline_home = config['pipeline_home']
+chgrp_group = config["chgrp_group"]
 shell.prefix("""
     set -e -o pipefail
     module purge
@@ -39,7 +40,7 @@ onstart:
     shell("echo ' {pipeline_type} pipeline version {pipeline_version} started on Biowulf. Samples: {SAMPLES}. Working Dir:  {work_dir}' |mutt -e 'my_hdr From:chouh@nih.gov' -s 'Khanlab {pipeline_type} Pipeline Status' `whoami`@mail.nih.gov {emails} ")
 onsuccess:
     shell("echo ' {pipeline_type} pipeline version {pipeline_version} finished on Biowulf. Samples: {SAMPLES}. Working Dir:  {work_dir}' |mutt -e 'my_hdr From:chouh@nih.gov' -s 'Khanlab {pipeline_type} Pipeline Status' `whoami`@mail.nih.gov {emails} ")
-    shell("for s in {SAMPLES};do touch {work_dir}/${{s}}/successful.txt;chgrp -R khanlab {work_dir}/${{s}};done")
+    shell("for s in {SAMPLES};do touch {work_dir}/${{s}}/successful.txt;chgrp -R {chgrp_group} {work_dir}/${{s}};done")
     print("Workflow finished, no error")
 
 rule all:

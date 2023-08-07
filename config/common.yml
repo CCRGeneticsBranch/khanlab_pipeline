@@ -1,6 +1,7 @@
 %YAML 1.2
 ---
 pipeline_version: "v0.1"
+chgrp_group: "khanlab"
 emails: " -c chouh@nih.gov"
 FASTQ_prefix: "Sample_"
 FASTQ_suffix_R1: "_R1.fastq.gz"
