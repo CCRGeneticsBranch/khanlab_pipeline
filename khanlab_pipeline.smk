@@ -11,7 +11,7 @@ data_dir = config['data_dir']
 work_dir = config['work_dir']
 pipeline_type = config['type']
 pipeline_home = config['pipeline_home']
-chgrp_group = config["chgrp_group"]
+
 shell.prefix("""
     set -e -o pipefail
     module purge
@@ -22,6 +22,7 @@ shell.prefix("""
     """)
 configfile: pipeline_home +"/config/common.yml"
 pipeline_version = config["pipeline_version"]
+chgrp_group = config["chgrp_group"]
 emails = config["emails"]
 config["pipeline_home"] = pipeline_home
 config["work_dir"] = work_dir
