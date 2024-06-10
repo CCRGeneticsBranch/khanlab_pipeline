@@ -18,7 +18,7 @@ my $dryrun;
 my $local;
 my $dag;
 my $help;
-my $walltime = "30:00:00";
+my $walltime = "50:00:00";
 my $partition = "ccr,norm";
 
 #$pipeline_home = readpipe()
@@ -133,5 +133,5 @@ else{
 }
 
 chomp $jobid;
-print "$jobid\t$sheet\t$pipeline_home\t$work_dir/pipeline.$type.${sheet_name}_$now.log\n" if $jobid;
+print "$jobid\t$sheet\t$pipeline_home\t$work_dir/log/pipeline.$type.${sheet_name}_$now.$jobid.o\n" if $jobid;
 

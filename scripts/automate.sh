@@ -35,7 +35,8 @@ echo $genome_str
 if [[ "$type" == "hic" || "$type" == "chipseq" || "$type" == "rnaseq" ]];then
 	if [[ "$type" == "chipseq" ]];then
 		sample_sheet_home=/data/khanlab/projects/ChIP_seq/sample_sheets
-		processed_data_home=/data/khanlab/projects/ChIP_seq/processed_DATA
+		#processed_data_home=/data/khanlab/projects/ChIP_seq/processed_DATA
+		processed_data_home=/data/khanlab3/hsienchao/ChIPseq/processed_DATA
 	fi
 	if [[ "$type" == "hic" ]];then
 		sample_sheet_home=/data/khanlab/projects/HiC/sample_sheets
@@ -45,7 +46,7 @@ if [[ "$type" == "hic" || "$type" == "chipseq" || "$type" == "rnaseq" ]];then
 	mkdir -p $processed_data_home
 	yaml_file=$sample_sheet_home/${sample_id}.yaml
 	echo "mv ${sample_id}.yaml $yaml_file"
-	mv ${sample_id}.yaml $yaml_file
+	mv -f ${sample_id}.yaml $yaml_file
 	for genome in "${genomes[@]}";do
 		g_nos=`echo $genome | sed 's/ //g'`
 		mkdir -p $processed_data_home/$g_nos

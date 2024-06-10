@@ -66,7 +66,7 @@ except Exception as err:
     shell("echo 'RNAseq pipeline has exception: reason " + contents + ". Working Dir:  {work_dir}' |mutt -e 'my_hdr From:chouh@nih.gov' -s 'Khanlab RNAseq Pipeline Status' `whoami`@mail.nih.gov {emails} ")
     sys.exit()
     
-TARGETS = BAMS + HLA + RSEM + STRINGTIE
+TARGETS = BAMS + RSEM
 
 localrules: all, prepareFASTQ, MergeHLA
 

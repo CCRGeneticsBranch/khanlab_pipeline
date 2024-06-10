@@ -13,9 +13,9 @@ version:
     star: "2.7.3a"
     xenome: "1.0.1"
     bowtie: "1.1.1"
-    rsem: "1.3.0"
+    rsem: "1.3.3"
     HLAminer: "1.3.1"
-    stringtie: "2.1.4"
+    stringtie: "2.2.3"
 annotations:
     - gencode
     - ucsc

@@ -16,7 +16,7 @@ version_common:
     python2: "2.7"
     python3: "3.8"
     picard: "2.27.3"
-    snakemake: "5.13.0"
+    snakemake: "5.24.1"
     sigularity: "3.6.4"
 cluster_common:
     small: "--partition=quick,norm    --time=03:00:00 --mem=08G  --cpus-per-task=1   --gres=lscratch:05"

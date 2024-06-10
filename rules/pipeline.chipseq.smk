@@ -23,7 +23,7 @@ try:
         #add default values
         if not "PeakCalling" in sample:
             sample["PeakCalling"] = "narrow"
-        if sample["PeakCalling"] == "" or sample["PeakCalling"] == ".":
+        if sample["PeakCalling"] == "" or sample["PeakCalling"] == "." or sample["PeakCalling"] == "nan":
             sample["PeakCalling"] = "narrow"
         if not "LibrarySize" in sample:
             sample["LibrarySize"] = "."
@@ -72,7 +72,10 @@ try:
         #SPP.append(sample_id + "/qc/" + sample_id + ".spp.txt")
         QC.append(sample_id + "/qc/fingerPrint.pdf")
         QC.append(sample_id + "/qc/fingerPrint.tab")
-        has_exp = "Matched RNA-seq lib" in sample and sample["Matched RNA-seq lib"] != "." and sample["Matched RNA-seq lib"] != ""
+        has_exp = "Matched RNA-seq lib" in sample and sample["Matched RNA-seq lib"] != "." and sample["Matched RNA-seq lib"] != "" and sample["Matched RNA-seq lib"] != "nan"
+        has_exp = has_exp and os.path.exists(config["rnaseq_data_dir"] + "/Sample_" + sample["Matched RNA-seq lib"] + "/Sample_" + sample["Matched RNA-seq lib"] + suffix_R1)
+        #if not os.path.exists(config["rnaseq_data_dir"] + "/Sample_" + sample["Matched RNA-seq lib"] + "/Sample_" + sample["Matched RNA-seq lib"] + suffix_R1):
+        #    raise Exception("RNAseq file:" + config["rnaseq_data_dir"] + "/Sample_" + sample["Matched RNA-seq lib"] + "/Sample_" + sample["Matched RNA-seq lib"] + suffix_R1)
         if has_exp:
             RNAseq.append(sample_id + "/RNAseq/" + sample["Matched RNA-seq lib"] + "." +  sample["Genome"] + ".ucsc.genes.TPM.txt")
         cutoff_types = ["p","q"]
@@ -138,7 +141,7 @@ except Exception as err:
     shell("echo 'ChIPseq pipeline has exception: reason " + contents + ". Working Dir:  {work_dir}' |mutt -e 'my_hdr From:chouh@nih.gov' -s 'Khanlab ChIPseq Pipeline Status' `whoami`@mail.nih.gov {emails} ")
     sys.exit()
     
-TARGETS = FASTQCS + BAMS + BWS + TDFS + SPP + MACS2 + ANNOTATION + ROSE + MOTIFS + EDENS + RNAseq + COLTRONS + QC
+TARGETS = FASTQCS + BAMS + BWS + TDFS + SPP + MACS2 + ANNOTATION + ROSE + MOTIFS + EDENS + RNAseq + QC
 
 localrules: all, prepareFASTQ, EDEN, prepareSummit, prepareRoseSummit
 
@@ -151,7 +154,7 @@ rule RNAseq_pipeline:
             config["version_common"]["snakemake"]
     params:
             work_dir = config["work_dir"],
-            data_dir = config["data_dir"],
+            data_dir = config["rnaseq_data_dir"],
             now = config["now"],
             batch    = config["cluster_common"]["subflow"],
             pipeline_home = config["pipeline_home"],
@@ -167,14 +170,15 @@ rule RNAseq_pipeline:
             module load python/{params.version_python}
             python {params.pipeline_home}/scripts/sampleToYaml.py -s {params.rnaseq_sample} -o {wildcards.sample}/RNAseq/{params.rnaseq_sample}.rnaseq.yaml
             module load snakemake/{version}
-            {params.pipeline_home}/launch -t rnaseq -w {params.work_dir}/../../RNAseq -s {wildcards.sample}/RNAseq/{params.rnaseq_sample}.rnaseq.yaml -local
+            {params.pipeline_home}/launch -t rnaseq -d {params.data_dir} -g {params.genome} -w {wildcards.sample}/RNAseq -s {wildcards.sample}/RNAseq/{params.rnaseq_sample}.rnaseq.yaml -local
             echo -e "Chr\\tStart\\tStop\\tGeneID\\tTPM" > {output}
             join -t $'\\t' -1 4 -2 1 <(sort -k4,4 {params.pipeline_home}/{params.gene_bed} ) <(grep -v gene_id {params.work_dir}/../../RNAseq/{params.rnaseq_sample}/RSEM_{params.genome}_ucsc/{params.rnaseq_sample}.{params.genome}.ucsc.genes.results|sort -k1,1) | awk -F'\\t' 'OFS="\\t"{{print $2,$3,$4,$1,$10}}' | sort -k 1,1 -k2,2n >> {output}
+            rm -rf {wildcards.sample}/RNAseq/*/STAR*
             """
 
 rule coltron:
     input:
-            rose_out="{sample}/{macs_dir}/{rose_dir}/{sample}_peaks_AllEnhancers.table.txt",
+            rose_out="{sample}/{macs_dir}/{rose_dir}/{sample}_peaks_SuperStitched.table.txt",
             bam="{sample}/{sample}.bam",
             exp_file=lambda wildcards: wildcards.sample + "/RNAseq/" +  samples[wildcards.sample]["Matched RNA-seq lib"] + "." + samples[wildcards.sample]["Genome"] + ".ucsc.genes.TPM.txt"
     output:
@@ -536,7 +540,7 @@ rule makeTDF:
     shell:
             """  
             module load igvtools/{version}
-            dup=`cut -f3 {wildcards.sample}/qc/mapping_summary.txt`
+            dup=`cut -f4 {wildcards.sample}/qc/mapping_summary.txt`
             keep_dup="--includeDuplicates"
             if (( $(echo "$dup > {params.dup_cutoff}" |bc -l) )); then
                 keep_dup=""
@@ -565,7 +569,7 @@ rule makeBigWig:
     shell:
             """  
             module load deeptools/{version}
-            dup=`cut -f3 {wildcards.sample}/qc/mapping_summary.txt`
+            dup=`cut -f4 {wildcards.sample}/qc/mapping_summary.txt`
             keep_dup=""
             if (( $(echo "$dup > {params.dup_cutoff}" |bc -l) )); then
                 keep_dup="--ignoreDuplicates"
